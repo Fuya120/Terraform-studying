@@ -4,22 +4,14 @@ Terraformの学習記録です。
 
 ## プロジェクトステータス
 🚧 **開発中（2025年2月末完成予定）**
-
-- [ ] インフラ設計完了
-
-- [ ] Terraform構成完了
-    - [o] provider.tf
-    - [o] data.tf
-    - [o] network.tf
-    - [o] iam_role.tf
-    - [o] security_group.tf
-    - [o] nat_instance.tf
-    
-    - [ ] terraform.tf
-    - [ ] variables.tf
-    - [ ] terraform.tfvars
-    - [ ] outputs.tf
-
+- [o] AWS CLI,Terraform等の初期設定完了
+- [o] バックエンドファイルのS3保管設定完了
+- [o] ネットワーク構築完了
+- [o] WEBサーバ構築、ブラウザアクセス確認完了
+- [o] AutoScaling、ALB構築完了
+- [o] APサーバ構築、WEBサーバとの連携確認完了
+- [ ] APサーバ用cloudmapの構築、内部DNSの構築完了
+- [ ] DBサーバ構築、3層アーキテクチャの連携確認完了
 - [ ] Laravelアプリケーション実装中
 - [ ] ドキュメント整備完了
 
@@ -42,7 +34,7 @@ Terraformの学習記録です。
 4. 特徴
 - **高可用性**：マルチAZ構成により、データセンターレベルの障害が発生してもサービスを継続可能です。
 
-- **セキュリティ**：各サーバをプライベートサブネットに隔離し、外部からの直接アクセスを完全に遮断しています。また、SSMを使用することで安全にブラウザからプライベートサブネット内のインスタンスへアクセスすることが出来ます。
+- **セキュリティ**：各サーバをプライベートサブネットに隔離し、外部からの直接アクセスを完全に遮断しています。また、SSMを使用することで管理が楽になるだけでなく、安全にインスタンスへアクセスすることが出来ます。
 
 - **IaC（Infrastructure as Code）**：インフラ全体をコード化。環境の複製（ステージング環境の作成など）が数分で完了します。
 
@@ -52,14 +44,14 @@ Terraformの学習記録です。
 
 - IaC：Terraform
 
-- Cloud：AWS（VPC, ALB, EC2, RDS, Route53, SSM）
+- Cloud：AWS（VPC, ALB, EC2, RDS, Route53, SSM, Cloudmap）
 
 - Application: Laravel（PHP 8.x）
 
 - Database: MySQL 8.0
 
 6. ドキュメント一覧
-※詳細は「docs/」ディレクトリを参照ください。現在、鋭意作成中です。
+※詳細は「docs/」ディレクトリを参照ください（現在作成中）。
 
 | ドキュメント | 概要 |
 |---|---|
@@ -78,22 +70,4 @@ cd terraform
 terraform init
 terraform apply
 ```
-
-8. 想定コスト
-
-このインフラを稼働させた場合の月額概算（東京リージョン）：
-
-| サービス | 構成 | 月額 |
-|---|---|---|
-| EC2 (Web) | t3.micro × 2台 | $15 |
-| EC2 (AP) | t3.micro × 2台 | $15 |
-| NAT Instance | t3.nano × 2台 | $6 |
-| RDS | db.t3.micro (Multi-AZ) | $30 |
-| ALB | 1台 | $20 |
-| Route 53 | ホストゾーン1つ | $0.5 |
-| データ転送 | 小規模想定 | $5 |
-| **合計** | | **約$91.5/月** |
-
-※AWS無料枠適用前の概算です  
 ※検証後は必ず `terraform destroy` でリソース削除してください
-
