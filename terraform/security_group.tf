@@ -1,5 +1,5 @@
 # NATインスタンスのセキュリティグループ作成
-resource "aws_security_group" "nat" {
+resource "aws_security_group" "nat_sg" {
   name        = "nat-sg"
   description = "security-group for NAT"
   vpc_id      = aws_vpc.main.id
@@ -26,7 +26,7 @@ resource "aws_security_group" "nat" {
 }
 
 # ALBのセキュリティグループ作成
-resource "aws_security_group" "alb" {
+resource "aws_security_group" "alb_sg" {
   name        = "alb-sg"
   description = "security-group for ALB"
   vpc_id      = aws_vpc.main.id
@@ -62,7 +62,7 @@ resource "aws_security_group" "alb" {
 }
 
 # WEBサーバのセキュリティグループ作成
-resource "aws_security_group" "web" {
+resource "aws_security_group" "web_sg" {
   name        = "web-sg"
   description = "security-group for WEB"
   vpc_id      = aws_vpc.main.id
@@ -77,7 +77,7 @@ resource "aws_security_group" "web" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    security_groups = [aws_security_group.alb.id] 
+    security_groups = [aws_security_group.alb_sg.id] 
   }
 
   # アウトバウンド設定
@@ -90,7 +90,7 @@ resource "aws_security_group" "web" {
 }
 
 # APサーバのセキュリティグループ作成
-resource "aws_security_group" "ap" {
+resource "aws_security_group" "ap_sg" {
   name        = "ap-sg"
   description = "security-group for AP"
   vpc_id      = aws_vpc.main.id
@@ -102,10 +102,10 @@ resource "aws_security_group" "ap" {
   # インバウンド設定
   ingress { 
     description = "HTTP from WEB"
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
-    security_groups = [aws_security_group.web.id] 
+    security_groups = [aws_security_group.web_sg.id] 
   }
 
   # アウトバウンド設定
@@ -118,7 +118,7 @@ resource "aws_security_group" "ap" {
 }
 
 # DBサーバのセキュリティグループ作成
-resource "aws_security_group" "db" {
+resource "aws_security_group" "db_sg" {
   name        = "db-sg"
   description = "security-group for DB"
   vpc_id      = aws_vpc.main.id
@@ -133,7 +133,7 @@ resource "aws_security_group" "db" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    security_groups = [aws_security_group.ap.id] 
+    security_groups = [aws_security_group.ap_sg.id] 
   }
 
   # アウトバウンド設定

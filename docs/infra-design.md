@@ -32,7 +32,7 @@
 ## 1. システム概要
 
 ### 1.1 システム構成図
-
+🚧 開発中のため、参考程度
 ![システム構成図](./images/architecture.png)
 
 ### 1.2 アーキテクチャ概要
@@ -50,13 +50,11 @@
 | 層 | 技術 | 用途 |
 |---|---|---|
 | **DNS** | Route 53 | ドメイン管理、ヘルスチェック |
-| **負荷分散** | Application Load Balancer (ALB) | トラフィック分散、SSL終端 |
+| **負荷分散** | Application Load Balancer (ALB) | トラフィック分散、ヘルスチェック |
 | **Web層** | EC2 (Amazon Linux 2023) + Nginx | Webサーバ |
-| **AP層** | EC2 (Amazon Linux 2023) + Tomcat | アプリケーションサーバ |
+| **AP層** | EC2 (Amazon Linux 2023) + PHP | アプリケーションサーバ |
 | **DB層** | RDS for MySQL 8.0 | データベース（Multi-AZ） |
-| **監視** | CloudWatch + SNS | リソース監視、アラート通知 |
 | **IaC** | Terraform 1.5+ | インフラ自動化 |
-| **構成管理** | Ansible 2.14+ | ミドルウェア自動設定 |
 
 ---
 
@@ -90,8 +88,8 @@
 
 | サブネット名 | AZ | CIDR | 用途 | 配置リソース |
 |---|---|---|---|---|
-| private-ap-1a | ap-northeast-1a | `10.0.20.0/24` | AP層 | EC2 (Tomcat) |
-| private-ap-1c | ap-northeast-1c | `10.0.21.0/24` | AP層 | EC2 (Tomcat) |
+| private-ap-1a | ap-northeast-1a | `10.0.20.0/24` | AP層 | EC2 (PHP) |
+| private-ap-1c | ap-northeast-1c | `10.0.21.0/24` | AP層 | EC2 (PHP) |
 
 #### プライベートサブネット（DB層）
 
@@ -127,13 +125,13 @@
 ```
 【ユーザーアクセス時】
 Internet
-  ↓ HTTPS (443)
+  ↓ HTTP (80)
 Route 53 (DNS解決)
   ↓
 ALB (Public Subnet)
   ↓ HTTP (80)
 EC2 - Web層 (Private Subnet)
-  ↓ HTTP (8080)
+  ↓ HTTP (9000)
 EC2 - AP層 (Private Subnet)
   ↓ MySQL (3306)
 RDS (Private Subnet)
@@ -156,12 +154,12 @@ Internet
 
 | 項目 | 値 | 備考 |
 |---|---|---|
-| **インスタンスタイプ** | t3.micro | vCPU: 2, メモリ: 1GB |
+| **インスタンスタイプ** | t2.micro | vCPU: 1, メモリ: 1GB |
 | **OS** | Amazon Linux 2023 | 最新のAWSサポートOS |
 | **台数** | 2台（通常時）、1〜4台（Auto Scaling） | 負荷に応じて自動増減 |
 | **配置** | プライベートサブネット（Web層） | Multi-AZ |
 | **ミドルウェア** | Nginx 1.24+ | リバースプロキシ、静的コンテンツ配信 |
-| **ストレージ** | gp3 20GB | 汎用SSD |
+| **ストレージ** | gp3 8GB | 汎用SSD |
 | **IAMロール** | EC2-SSM-Role | Session Manager接続用 |
 
 #### ソフトウェア構成
@@ -177,20 +175,19 @@ Amazon Linux 2023
 
 | 項目 | 値 | 備考 |
 |---|---|---|
-| **インスタンスタイプ** | t3.micro | vCPU: 2, メモリ: 1GB |
+| **インスタンスタイプ** | t2.micro | vCPU: 1, メモリ: 1GB |
 | **OS** | Amazon Linux 2023 | 最新のAWSサポートOS |
 | **台数** | 2台（通常時）、1〜4台（Auto Scaling） | 負荷に応じて自動増減 |
 | **配置** | プライベートサブネット（AP層） | Multi-AZ |
-| **ミドルウェア** | Tomcat 10.x / PHP-FPM | アプリケーション実行環境 |
-| **ストレージ** | gp3 20GB | 汎用SSD |
+| **ミドルウェア** | PHP-FPM | アプリケーション実行環境 |
+| **ストレージ** | gp3 8GB | 汎用SSD |
 | **IAMロール** | EC2-SSM-Role | Session Manager接続用 |
 
 #### ソフトウェア構成
 
 ```
 Amazon Linux 2023
-├── Java 17
-├── Tomcat 10.1.x
+├── PHP-FPM
 ├── CloudWatch Agent（ログ収集）
 └── SSM Agent（リモートアクセス用）
 ```
@@ -199,7 +196,7 @@ Amazon Linux 2023
 
 | 項目 | 値 | 備考 |
 |---|---|---|
-| **インスタンスタイプ** | t3.nano | vCPU: 2, メモリ: 0.5GB |
+| **インスタンスタイプ** | t2.micro | vCPU: 1, メモリ: 1GB |
 | **OS** | Amazon Linux 2023 | |
 | **台数** | 2台（Multi-AZ） | 各AZに1台ずつ配置 |
 | **配置** | パブリックサブネット | |
@@ -327,8 +324,6 @@ log_queries_not_using_indexes = 1
 
 | 対象 | 暗号化方式 | 暗号化範囲 |
 |---|---|---|
-| **通信（インターネット〜ALB）** | TLS 1.2以上 | HTTPS通信 |
-| **通信（ALB〜EC2）** | HTTP（内部通信） | VPC内のため平文 |
 | **RDS（保存データ）** | AES-256（KMS） | DB内の全データ |
 | **RDS（バックアップ）** | AES-256（KMS） | 自動バックアップ |
 | **EBS（EC2ストレージ）** | AES-256（KMS） | オプション（必要に応じて有効化） |

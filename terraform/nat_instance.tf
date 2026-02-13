@@ -2,7 +2,7 @@
 resource "aws_instance" "nat_1a" {
   ami                         = data.aws_ami.al2023.id
   instance_type               = var.instance_type
-  vpc_security_group_ids      = [aws_security_group.nat.id]
+  vpc_security_group_ids      = [aws_security_group.nat_sg.id]
   subnet_id                   = aws_subnet.pub_1a.id
   associate_public_ip_address = true
 
@@ -17,13 +17,31 @@ resource "aws_instance" "nat_1a" {
               #!/bin/bash
               # IPフォワーディングを有効化（自分宛じゃなくても、通り抜けを許可）
               echo 1 > /proc/sys/net/ipv4/ip_forward
-              
-              # iptables（通信制御ツール）を使ってマスカレード（NAT設定）
-              # ここではOSが起動するたびに設定が有効になるように記述します
+              # 再起動しても設定が消えないように保存
+              echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+
+              # iptablesのインストール
               dnf install -y iptables-services
+
+              # デフォルトで設定されている「拒否ルール入りのファイル」を
+              # 「最初から全部許可（ACCEPT）する設定」で上書きする
+              cat <<'INNER_EOF' > /etc/sysconfig/iptables
+              *filter
+              :INPUT ACCEPT [0:0]
+              :FORWARD ACCEPT [0:0]
+              :OUTPUT ACCEPT [0:0]
+              COMMIT
+              INNER_EOF
+
+              # iptablesの起動、自動起動設定
               systemctl enable iptables
               systemctl start iptables
-              iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+              # ネットワークインターフェース名の自動取得
+              PRIMARY_IF=$(ip route | grep default | awk '{print $5}')
+
+              # マスカレード設定
+              iptables -t nat -A POSTROUTING -o $PRIMARY_IF -j MASQUERADE
               /sbin/iptables-save > /etc/sysconfig/iptables
               EOF
 
@@ -36,7 +54,7 @@ resource "aws_instance" "nat_1a" {
 resource "aws_instance" "nat_1c" {
   ami                         = data.aws_ami.al2023.id
   instance_type               = var.instance_type
-  vpc_security_group_ids      = [aws_security_group.nat.id]
+  vpc_security_group_ids      = [aws_security_group.nat_sg.id]
   subnet_id                   = aws_subnet.pub_1c.id
   associate_public_ip_address = true
 
@@ -51,13 +69,31 @@ resource "aws_instance" "nat_1c" {
               #!/bin/bash
               # IPフォワーディングを有効化（自分宛じゃなくても、通り抜けを許可）
               echo 1 > /proc/sys/net/ipv4/ip_forward
-              
-              # iptables（通信制御ツール）を使ってマスカレード（NAT設定）
-              # ここではOSが起動するたびに設定が有効になるように記述します
+              # 再起動しても設定が消えないように保存
+              echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+
+              # iptablesのインストール
               dnf install -y iptables-services
+
+              # デフォルトで設定されている「拒否ルール入りのファイル」を
+              # 「最初から全部許可（ACCEPT）する設定」で上書きする
+              cat <<'INNER_EOF' > /etc/sysconfig/iptables
+              *filter
+              :INPUT ACCEPT [0:0]
+              :FORWARD ACCEPT [0:0]
+              :OUTPUT ACCEPT [0:0]
+              COMMIT
+              INNER_EOF
+
+              # iptablesの起動、自動起動設定
               systemctl enable iptables
               systemctl start iptables
-              iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+              # ネットワークインターフェース名の自動取得
+              PRIMARY_IF=$(ip route | grep default | awk '{print $5}')
+
+              # マスカレード設定
+              iptables -t nat -A POSTROUTING -o $PRIMARY_IF -j MASQUERADE
               /sbin/iptables-save > /etc/sysconfig/iptables
               EOF
 
