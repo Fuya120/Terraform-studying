@@ -25,3 +25,23 @@ resource "aws_service_discovery_service" "main" {
     failure_threshold = 1
   }
 }
+
+resource "aws_service_discovery_instance" "ap_1a" {
+  instance_id = "ap_1a"
+  service_id  = aws_service_discovery_service.main.id
+
+  attributes = {
+    AWS_INSTANCE_IPV4 = aws_instance.ap_server_1a.private_ip
+    AWS_INSTANCE_PORT = "80"
+  }
+}
+
+resource "aws_service_discovery_instance" "ap_1c" {
+  instance_id = "ap_1c"
+  service_id  = aws_service_discovery_service.main.id
+
+  attributes = {
+    AWS_INSTANCE_IPV4 = aws_instance.ap_server_1c.private_ip
+    AWS_INSTANCE_PORT = "80"
+  }
+}

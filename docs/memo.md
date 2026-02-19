@@ -1,4 +1,4 @@
-- プライベートサブネットに配置したインスタンスにSSMからアクセスできず、LBのヘルスチェックも失敗する
+### プライベートサブネットに配置したインスタンスにSSMからアクセスできず、LBのヘルスチェックも失敗する
 【原因】すべてのパケットの通り抜けを拒否する設定が、userdataブロックで削除していたにも関わらず残っていたため
 
 【確認方法】
@@ -58,10 +58,20 @@ cat <<'INNER_EOF' > <ファイルのパス>
 INNER_EOF
 ```
 
-- APサーバを導入してブラウザからの確認はできたものの、ALBのヘルスチェックが403をたたき出す
+### APサーバを導入してブラウザからの確認はできたものの、ALBのヘルスチェックが403をたたき出す
 【原因】`/var/www/html/`にindex.htmlがなく、セキュリティ設定によってはディレクトリの中身を見る機能がオフになっている場合があるため
 ⇒この状態でヘルスチェックのパスを`/`に指定していると、「見せられないよ！」とApacheから言われて403が出力される
 
 【解決方法】
 1. index.htmlを事前に作成するようにする
 2. ヘルスチェックのパスを変更しておく
+
+### APサーバをcloudmapに登録できず、webサーバ側がAPサーバを認識できずエラーが発生した
+【原因】AWS の標準設定では、「**IMDSv2**」というセキュリティの厳しいモードが有効になっているから
+IMDSv2（Instance Metadata Service Version 2）：AWS の EC2 インスタンスが自分自身の情報（インスタンス ID、IP アドレス、IAM ロールの認証情報など）を取得するための仕組み。より安全な最新バージョンがv2
+⇒情報の取り出しに『合言葉（トークン）』が必要になった、セキュリティ強化版
+
+systemctl status cloudmap-register.service
+sudo journalctl -xeu cloudmap-register.service
+vi /etc/systemd/system/cloudmap-register.service
+vi /var/log/user-data.log

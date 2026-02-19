@@ -5,7 +5,7 @@ resource "aws_launch_template" "web_lt" {
   instance_type = var.instance_type
 
   iam_instance_profile {
-    name = aws_iam_instance_profile.ssm_profile.name
+    name = aws_iam_instance_profile.web_profile.name
   }
 
   vpc_security_group_ids = [aws_security_group.web_sg.id]
@@ -13,6 +13,7 @@ resource "aws_launch_template" "web_lt" {
   user_data = base64encode(<<-EOF
               #!/bin/bash
               dnf install -y nginx
+              sleep 30
 
               cat <<'INNER_EOF' > /etc/nginx/nginx.conf
               user nginx;
@@ -91,36 +92,56 @@ resource "aws_launch_template" "web_lt" {
 }
 
 # APサーバの起動テンプレート作成
-# resource "aws_launch_template" "ap_lt" {
-#   name_prefix   = "${var.project_name}-ap-lt" # 「name」ではなくこっち。テンプレートを更新した際に、古いものを消す前に新しいものを作れるようにするため
-#   image_id      = data.aws_ami.al2023.id
-#   instance_type = var.instance_type
+resource "aws_launch_template" "ap_lt" {
+  name_prefix   = "${var.project_name}-ap-lt" # 「name」ではなくこっち。テンプレートを更新した際に、古いものを消す前に新しいものを作れるようにするため
+  image_id      = data.aws_ami.al2023.id
+  instance_type = var.instance_type
 
-#   iam_instance_profile {
-#     name = aws_iam_instance_profile.ssm_profile.name
-#   }
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ap_profile.name
+  }
 
-#   vpc_security_group_ids = [aws_security_group.ap_sg.id]
+  vpc_security_group_ids = [aws_security_group.ap_sg.id]
 
-#   user_data = base64encode(<<-EOF
-#               #!/bin/bash
-#               dnf install -y php
-#               systemctl enable php-fpm
-#               systemctl start php-fpm
-#               echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php
-#               EOF
-#   )
+  user_data = base64encode(<<-EOF
+              #!/bin/bash
+              # PHP,Apacheのインストール
+              dnf update -y
+              dnf install php php-fpm httpd -y # Apacheもインストールすることで、APサーバ側での作業が不要になる
 
-#   tag_specifications {
-#     resource_type = "instance"
+              systemctl start httpd
+              systemctl enable httpd
+              systemctl start php-fpm
+              systemctl enable php-fpm
 
-#     tags = {
-#       Name = "${var.project_name}-ap-server"
-#     }
-#   }
+              echo "Hello from ap" > /var/www/html/index.php
 
-#   # 新しいテンプレートを作成してから、古いのを削除するようにする
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
+              # まずはトークン（合言葉）を取得する
+              TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+              
+              # トークンを使ってインスタンスIDとIPを取得する
+              INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+              PRIVATE_IP=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+
+              # Cloud Mapへ自動登録
+              aws servicediscovery register-instance \
+              --service-id ${aws_service_discovery_service.main.id} \
+              --instance-id $INSTANCE_ID \
+              --attributes AWS_INSTANCE_IPV4=$PRIVATE_IP,AWS_INSTANCE_PORT=80 \
+              --region ap-northeast-1
+  EOF
+  )
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "${var.project_name}-ap-server"
+    }
+  }
+
+  # 新しいテンプレートを作成してから、古いのを削除するようにする
+  lifecycle {
+    create_before_destroy = true
+  }
+}
