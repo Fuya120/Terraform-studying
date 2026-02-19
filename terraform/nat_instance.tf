@@ -10,7 +10,7 @@ resource "aws_instance" "nat_1a" {
   source_dest_check = false
 
   # 前に作ったインスタンスプロファイル（SSM用）を装着
-  iam_instance_profile = aws_iam_instance_profile.ssm_profile.name
+  iam_instance_profile = aws_iam_instance_profile.nat_profile.name
 
   # インスタンス起動時に実行するスクリプト（パケット転送の有効化）
   user_data = <<-EOF
@@ -50,7 +50,6 @@ resource "aws_instance" "nat_1a" {
   }
 }
 
-# インスタンス作成
 resource "aws_instance" "nat_1c" {
   ami                         = data.aws_ami.al2023.id
   instance_type               = var.instance_type
@@ -62,7 +61,7 @@ resource "aws_instance" "nat_1c" {
   source_dest_check = false
 
   # 前に作ったインスタンスプロファイル（SSM用）を装着
-  iam_instance_profile = aws_iam_instance_profile.ssm_profile.name
+  iam_instance_profile = aws_iam_instance_profile.nat_profile.name
 
   # インスタンス起動時に実行するスクリプト（パケット転送の有効化）
   user_data = <<-EOF
