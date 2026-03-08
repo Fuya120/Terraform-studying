@@ -6,9 +6,9 @@
 |---|---|
 | プロジェクト名 | 社内技術ナレッジ共有ツール インフラ基盤構築 |
 | 作成日 | 2025年2月10日 |
-| 最終更新日 | 2025年2月10日 |
-| バージョン | 1.0 |
-| 作成者 | [あなたの名前] |
+| 最終更新日 | 2025年2月20日 |
+| バージョン | 1.1 |
+| 作成者 | 堺風彌 |
 | 関連ドキュメント | [要件定義書](./requirements.md) |
 
 ---
@@ -81,22 +81,22 @@
 
 | サブネット名 | AZ | CIDR | 用途 | 配置リソース |
 |---|---|---|---|---|
-| private-web-1a | ap-northeast-1a | `10.0.10.0/24` | Web層 | EC2 (Nginx) |
-| private-web-1c | ap-northeast-1c | `10.0.11.0/24` | Web層 | EC2 (Nginx) |
+| private-web-1a | ap-northeast-1a | `10.0.11.0/24` | Web層 | EC2 (Nginx) |
+| private-web-1c | ap-northeast-1c | `10.0.12.0/24` | Web層 | EC2 (Nginx) |
 
 #### プライベートサブネット（AP層）
 
 | サブネット名 | AZ | CIDR | 用途 | 配置リソース |
 |---|---|---|---|---|
-| private-ap-1a | ap-northeast-1a | `10.0.20.0/24` | AP層 | EC2 (PHP) |
-| private-ap-1c | ap-northeast-1c | `10.0.21.0/24` | AP層 | EC2 (PHP) |
+| private-ap-1a | ap-northeast-1a | `10.0.21.0/24` | AP層 | EC2 (PHP) |
+| private-ap-1c | ap-northeast-1c | `10.0.22.0/24` | AP層 | EC2 (PHP) |
 
 #### プライベートサブネット（DB層）
 
 | サブネット名 | AZ | CIDR | 用途 | 配置リソース |
 |---|---|---|---|---|
-| private-db-1a | ap-northeast-1a | `10.0.30.0/24` | DB層 | RDS (Primary) |
-| private-db-1c | ap-northeast-1c | `10.0.31.0/24` | DB層 | RDS (Standby) |
+| private-db-1a | ap-northeast-1a | `10.0.31.0/24` | DB層 | RDS (Primary) |
+| private-db-1c | ap-northeast-1c | `10.0.32.0/24` | DB層 | RDS (Standby) |
 
 ### 2.3 ルートテーブル設計
 
@@ -131,7 +131,7 @@ Route 53 (DNS解決)
 ALB (Public Subnet)
   ↓ HTTP (80)
 EC2 - Web層 (Private Subnet)
-  ↓ HTTP (9000)
+  ↓ HTTP (80)
 EC2 - AP層 (Private Subnet)
   ↓ MySQL (3306)
 RDS (Private Subnet)
@@ -154,7 +154,7 @@ Internet
 
 | 項目 | 値 | 備考 |
 |---|---|---|
-| **インスタンスタイプ** | t2.micro | vCPU: 1, メモリ: 1GB |
+| **インスタンスタイプ** | t3.micro | vCPU: 2, メモリ: 1GB |
 | **OS** | Amazon Linux 2023 | 最新のAWSサポートOS |
 | **台数** | 2台（通常時）、1〜4台（Auto Scaling） | 負荷に応じて自動増減 |
 | **配置** | プライベートサブネット（Web層） | Multi-AZ |
@@ -175,7 +175,7 @@ Amazon Linux 2023
 
 | 項目 | 値 | 備考 |
 |---|---|---|
-| **インスタンスタイプ** | t2.micro | vCPU: 1, メモリ: 1GB |
+| **インスタンスタイプ** | t3.micro | vCPU: 2, メモリ: 1GB |
 | **OS** | Amazon Linux 2023 | 最新のAWSサポートOS |
 | **台数** | 2台（通常時）、1〜4台（Auto Scaling） | 負荷に応じて自動増減 |
 | **配置** | プライベートサブネット（AP層） | Multi-AZ |
@@ -196,14 +196,14 @@ Amazon Linux 2023
 
 | 項目 | 値 | 備考 |
 |---|---|---|
-| **インスタンスタイプ** | t2.micro | vCPU: 1, メモリ: 1GB |
+| **インスタンスタイプ** | t3.nano | vCPU: 1, メモリ: 0.5GB |
 | **OS** | Amazon Linux 2023 | |
 | **台数** | 2台（Multi-AZ） | 各AZに1台ずつ配置 |
 | **配置** | パブリックサブネット | |
 | **用途** | プライベートサブネットからのインターネットアクセス | パッケージ更新、外部API通信 |
 
 **NAT Gateway vs NAT Instance の選定理由：**
-- コスト削減：NAT Gatewayは$32/月/台、NAT Instanceは$3/月/台
+- コスト削減：NAT Gatewayは32ドル/月/台、NAT Instanceは3ドル/月/台
 - 検証環境では十分なスループット
 - Terraformで簡単に構築可能
 
@@ -218,7 +218,7 @@ Amazon Linux 2023
 | **エンジン** | MySQL 8.0.35 | 最新の安定版 |
 | **インスタンスタイプ** | db.t3.micro | vCPU: 2, メモリ: 1GB |
 | **Multi-AZ** | 有効 | Primary/Standby構成 |
-| **ストレージ** | gp3 20GB | 汎用SSD |
+| **ストレージ** | gp3 10GB | 汎用SSD |
 | **ストレージ自動拡張** | 有効（最大100GB） | 容量不足時に自動拡張 |
 | **暗号化** | 有効（KMS） | データ暗号化 |
 | **自動バックアップ** | 有効（保持期間7日） | 毎日深夜に自動実行 |
@@ -234,12 +234,6 @@ collation_server = utf8mb4_unicode_ci
 
 -- 接続設定
 max_connections = 100
-
--- ログ設定
-slow_query_log = 1
-long_query_time = 2
-log_queries_not_using_indexes = 1
-```
 
 ### 4.3 接続情報
 
@@ -705,11 +699,3 @@ resource "aws_autoscaling_policy" "web_scale_in" {
 | 1.0 | 2025/02/10 | [あなたの名前] | 初版作成 |
 
 ---
-
-## 承認
-
-| 役割 | 氏名 | 承認日 | 署名 |
-|---|---|---|---|
-| インフラ責任者 | - | - | - |
-| セキュリティ責任者 | - | - | - |
-| プロジェクトマネージャー | - | - | - |

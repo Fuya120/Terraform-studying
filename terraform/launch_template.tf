@@ -144,4 +144,5 @@ resource "aws_launch_template" "ap_lt" {
   lifecycle {
     create_before_destroy = true
   }
+
 }
