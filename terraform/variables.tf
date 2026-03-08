@@ -22,3 +22,13 @@ variable "project_name" {
   description = "リソースに付けられる共通のプロジェクト名"
   type        = string
 }
+
+variable "db_username" {
+  description = "DBのユーザー名"
+  type        = string
+}
+
+variable "db_password" {
+  description = "DBのパスワード"
+  type        = string
+}

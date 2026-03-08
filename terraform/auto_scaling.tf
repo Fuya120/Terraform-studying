@@ -40,4 +40,6 @@ resource "aws_autoscaling_group" "ap_asg" {
     value               = "${var.project_name}-ap-server"
     propagate_at_launch = true
   }
+
+  depends_on = [aws_service_discovery_service.main]
 }

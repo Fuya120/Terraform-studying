@@ -12,3 +12,8 @@ output "alb_dns_url" {
   description = "ALBのアクセスURL"
   value       = "http://${aws_lb.web_alb.dns_name}"  
 }
+
+output "name_servers" {
+  description = "ネームサーバー"
+  value       = aws_route53_zone.public.name_servers
+}
